@@ -1,5 +1,6 @@
 # dependencies (bun install)
 node_modules
+bun.lock
 
 # output
 out
@@ -12,8 +13,8 @@ coverage
 
 # logs
 logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+*.log
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # dotenv environment variable files
 .env
@@ -32,3 +33,24 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# Ignore uploads (originals, processed, thumbnails)
+uploads/
+
+# Ignore database files
+*.db
+*.db-shm
+*.db-wal
+
+# Ignore test/downloaded images
+downloaded_original.jpeg
+fototes.jpeg
+foto-*
+*.jpeg
+*.jpg
+*.png
+*.gif
+
+# Ignore docs not needed in repo
+CLAUDE.md
+PROJECT_CONTEXT.md
