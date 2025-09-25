@@ -372,7 +372,7 @@ const app = new Elysia()
   // Serve React app
   .get('/', index)
 
-  .listen(3000)
+  .listen(process.env.PORT || 3000)
 
 console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`)
 console.log(`📸 Classic Web Fotos API ready with all endpoints!`)

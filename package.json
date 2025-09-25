@@ -4,10 +4,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "~/.bun/bin/bun --watch src/index.ts",
-    "build": "~/.bun/bin/bun build src/index.ts --target bun --outdir ./dist",
-    "start": "NODE_ENV=production ~/.bun/bin/bun dist/index.js",
-    "test": "~/.bun/bin/bun test"
+    "dev": "bun --watch src/index.ts",
+    "build": "bun build src/index.ts --target bun --outdir ./dist",
+    "start": "NODE_ENV=production bun dist/index.js",
+    "start:node": "NODE_ENV=production node dist/index.js",
+    "test": "bun test"
   },
   "devDependencies": {
     "@types/bun": "^1.2.22",
