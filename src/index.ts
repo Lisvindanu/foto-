@@ -23,7 +23,9 @@ const app = new Elysia()
     credentials: true
   }))
   .use(staticPlugin({
-    assets: 'public',
+    assets: process.env.NODE_ENV === 'production'
+      ? join(process.cwd(), 'dist/public')
+      : join(process.cwd(), 'public'),
     prefix: '/'
   }))
 
@@ -364,10 +366,67 @@ const app = new Elysia()
   .use(sharesModule)
   .use(publicSharesModule)
 
+  // Explicit static file routes for production
+  .get('/app.js', async ({ set }) => {
+    try {
+      let filePath;
+      // Try production path first, then fallback to development
+      const prodPath = join(process.cwd(), 'dist/public', 'app.js');
+      const devPath = join(process.cwd(), 'public', 'app.js');
+
+      const prodFile = Bun.file(prodPath);
+      const devFile = Bun.file(devPath);
+
+      if (await prodFile.exists()) {
+        filePath = prodPath;
+      } else if (await devFile.exists()) {
+        filePath = devPath;
+      } else {
+        set.status = 404;
+        return 'app.js not found';
+      }
+
+      const file = Bun.file(filePath);
+      set.headers['content-type'] = 'application/javascript';
+      return file;
+    } catch (error) {
+      set.status = 500;
+      return 'Error serving app.js';
+    }
+  })
+
+  .get('/styles.css', async ({ set }) => {
+    try {
+      let filePath;
+      const prodPath = join(process.cwd(), 'dist/public', 'styles.css');
+      const devPath = join(process.cwd(), 'public', 'styles.css');
+
+      const prodFile = Bun.file(prodPath);
+      const devFile = Bun.file(devPath);
+
+      if (await prodFile.exists()) {
+        filePath = prodPath;
+      } else if (await devFile.exists()) {
+        filePath = devPath;
+      } else {
+        set.status = 404;
+        return 'styles.css not found';
+      }
+
+      const file = Bun.file(filePath);
+      set.headers['content-type'] = 'text/css';
+      return file;
+    } catch (error) {
+      set.status = 500;
+      return 'Error serving styles.css';
+    }
+  })
+
   // Share page route
   .get('/share/:shareToken', async ({ set }) => {
     try {
-      const shareHtmlPath = join(process.cwd(), 'public', 'share.html');
+      const publicDir = process.env.NODE_ENV === 'production' ? 'dist/public' : 'public';
+      const shareHtmlPath = join(process.cwd(), publicDir, 'share.html');
       const file = Bun.file(shareHtmlPath);
 
       if (!(await file.exists())) {
@@ -387,7 +446,8 @@ const app = new Elysia()
   // Serve React app
   .get('/', async ({ set }) => {
     try {
-      const indexHtmlPath = join(process.cwd(), 'public', 'index.html');
+      const publicDir = process.env.NODE_ENV === 'production' ? 'dist/public' : 'public';
+      const indexHtmlPath = join(process.cwd(), publicDir, 'index.html');
       const file = Bun.file(indexHtmlPath);
 
       if (!(await file.exists())) {

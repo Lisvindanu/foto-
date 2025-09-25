@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "build": "bun build src/index.ts --target bun --outdir ./dist",
+    "build": "bun build src/index.ts --target bun --outdir ./dist && bun build public/app.tsx --outdir ./dist/public --target browser && cp -r public/*.html public/*.css public/assets public/favicon.ico dist/public/ 2>/dev/null || true",
     "start": "NODE_ENV=production bun dist/index.js",
     "start:node": "NODE_ENV=production node dist/index.js",
     "test": "bun test"
