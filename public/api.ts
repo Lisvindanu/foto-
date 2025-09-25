@@ -1,8 +1,17 @@
 import { treaty } from '@elysiajs/eden'
 import type { App } from '../src/index'
 
-// Create the Eden Treaty client
-export const api = treaty<App>('localhost:3000')
+// Create the Eden Treaty client with environment-aware base URL
+const getBaseURL = () => {
+  // In browser, use current origin (e.g., https://clasic-web-foto.onrender.com)
+  // In development, fallback to localhost:3000
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  return 'http://localhost:3000';
+};
+
+export const api = treaty<App>(getBaseURL())
 
 // Helper function to get auth headers
 export function getAuthHeaders() {
