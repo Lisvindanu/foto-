@@ -4,7 +4,6 @@ import { staticPlugin } from '@elysiajs/static'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { initializeDatabase, getAppSettings } from './database/supabase'
-import index from '../public/index.html'
 
 // Import all modules following Elysia best practices
 import { authModule } from './modules/auth'
@@ -14,7 +13,6 @@ import { downloadsModule } from './modules/downloads'
 import { statsModule } from './modules/stats'
 import { sharesModule, publicSharesModule } from './modules/shares'
 import { uploadImage } from './utils/storage'
-import shareHtml from '../public/share.html'
 
 // Database already initialized via Supabase dashboard
 console.log('✅ Using Supabase database (schema applied manually)')
@@ -367,10 +365,44 @@ const app = new Elysia()
   .use(publicSharesModule)
 
   // Share page route
-  .get('/share/:shareToken', shareHtml)
+  .get('/share/:shareToken', async ({ set }) => {
+    try {
+      const shareHtmlPath = join(process.cwd(), 'public', 'share.html');
+      const file = Bun.file(shareHtmlPath);
+
+      if (!(await file.exists())) {
+        set.status = 404;
+        return 'Share file not found';
+      }
+
+      set.headers['content-type'] = 'text/html';
+      return file;
+    } catch (error) {
+      console.error('Error serving share.html:', error);
+      set.status = 500;
+      return 'Internal Server Error';
+    }
+  })
 
   // Serve React app
-  .get('/', index)
+  .get('/', async ({ set }) => {
+    try {
+      const indexHtmlPath = join(process.cwd(), 'public', 'index.html');
+      const file = Bun.file(indexHtmlPath);
+
+      if (!(await file.exists())) {
+        set.status = 404;
+        return 'Index file not found';
+      }
+
+      set.headers['content-type'] = 'text/html';
+      return file;
+    } catch (error) {
+      console.error('Error serving index.html:', error);
+      set.status = 500;
+      return 'Internal Server Error';
+    }
+  })
 
   .listen(process.env.PORT || 3000)
 
