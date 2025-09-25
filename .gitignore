@@ -54,3 +54,18 @@ foto-*
 # Ignore docs not needed in repo
 CLAUDE.md
 PROJECT_CONTEXT.md
+
+# Ignore SQL migration files and temp files
+*.sql
+add-more-filters.sql
+fix-paper-filters.sql
+
+# Ignore example/demo directories
+contoh/
+examples/
+demo/
+
+# Ignore temporary development files
+temp/
+tmp/
+*.tmp
