@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shared Photos - Classic Web Fotos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        }
+
+        .share-page {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .share-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .share-header {
+            margin-bottom: 30px;
+        }
+
+        .share-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .share-info {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .download-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px 0;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .download-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .download-button:active {
+            transform: translateY(0);
+        }
+
+        .error-state {
+            color: #dc3545;
+            font-size: 18px;
+        }
+
+        .loading-state {
+            color: #007bff;
+            font-size: 18px;
+        }
+
+        .share-meta {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .meta-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .meta-item:last-child {
+            border-bottom: none;
+        }
+
+        .meta-label {
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .meta-value {
+            color: #6c757d;
+        }
+
+        .branding {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .branding a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow: hidden;
+        }
+
+        .preview-photo {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .preview-photo:hover {
+            transform: scale(1.05);
+        }
+
+        .preview-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            color: white;
+            font-size: 12px;
+            padding: 10px 8px 5px;
+            text-align: center;
+        }
+
+        .more-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 50%;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .share-container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            .share-title {
+                font-size: 24px;
+            }
+
+            .meta-item {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .preview-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 10px;
+            }
+        }
+
+        /* Lightbox Modal */
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 40px;
+            color: white;
+            cursor: pointer;
+            z-index: 10000;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .lightbox-info {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+        }
+
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 30px;
+            color: white;
+            cursor: pointer;
+            z-index: 10000;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .lightbox-nav:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .lightbox-prev {
+            left: 30px;
+        }
+
+        .lightbox-next {
+            right: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .lightbox img {
+                max-width: 95%;
+                max-height: 85%;
+            }
+
+            .lightbox-close {
+                top: 10px;
+                right: 15px;
+                font-size: 30px;
+                width: 40px;
+                height: 40px;
+            }
+
+            .lightbox-nav {
+                font-size: 24px;
+                width: 40px;
+                height: 40px;
+            }
+
+            .lightbox-prev {
+                left: 15px;
+            }
+
+            .lightbox-next {
+                right: 15px;
+            }
+
+            .lightbox-info {
+                bottom: 15px;
+                padding: 10px 20px;
+                font-size: 14px;
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="share-page">
+        <div class="share-container">
+            <div class="share-header">
+                <div class="share-title">📸 Shared Photos</div>
+                <div class="share-info" id="shareInfo">Loading share information...</div>
+            </div>
+
+            <div id="shareContent">
+                <div class="loading-state">⏳ Loading...</div>
+            </div>
+
+            <div class="branding">
+                Powered by <a href="/" target="_blank">Classic Web Fotos</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-close" onclick="closeLightbox()">×</div>
+        <div class="lightbox-nav lightbox-prev" onclick="prevPhoto()">‹</div>
+        <div class="lightbox-nav lightbox-next" onclick="nextPhoto()">›</div>
+        <img id="lightbox-img" src="" alt="">
+        <div class="lightbox-info" id="lightbox-info"></div>
+    </div>
+
+    <script>
+        // Get share token from URL path
+        const pathParts = window.location.pathname.split('/');
+        const shareToken = pathParts[pathParts.length - 1];
+
+        if (!shareToken) {
+            document.getElementById('shareContent').innerHTML = '<div class="error-state">❌ Invalid share link</div>';
+        } else {
+            // Fetch share information from API endpoint
+            fetch(`/api/share/${shareToken}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const share = data.data;
+
+                        // Update share info
+                        document.getElementById('shareInfo').textContent = share.description || share.title;
+
+                        // Create download button and meta info
+                        const downloadUrl = `/api/share/${shareToken}/download`;
+
+                        // Create photo preview grid
+                        let previewHtml = '';
+                        if (share.previewPhotos && share.previewPhotos.length > 0) {
+                            previewHtml = '<div class="preview-grid">';
+                            share.previewPhotos.forEach((photo, index) => {
+                                if (index < 5) {
+                                    previewHtml += `
+                                        <div class="preview-photo" onclick="openLightbox(${index})">
+                                            <img src="${photo.thumbnailPath}" alt="${photo.displayName}" loading="lazy">
+                                            <div class="preview-overlay">${photo.displayName}</div>
+                                        </div>
+                                    `;
+                                } else if (index === 5 && share.photoCount > 6) {
+                                    previewHtml += `
+                                        <div class="preview-photo" onclick="openLightbox(${index})">
+                                            <img src="${photo.thumbnailPath}" alt="${photo.displayName}" loading="lazy">
+                                            <div class="more-indicator">+${share.photoCount - 5}</div>
+                                        </div>
+                                    `;
+                                }
+                            });
+                            previewHtml += '</div>';
+                        }
+
+                        document.getElementById('shareContent').innerHTML = `
+                            ${previewHtml}
+                            <div class="share-meta">
+                                <div class="meta-item">
+                                    <span class="meta-label">📷 Photos</span>
+                                    <span class="meta-value">${share.photoCount} photo${share.photoCount > 1 ? 's' : ''}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">🎨 Type</span>
+                                    <span class="meta-value">${share.downloadType === 'processed' ? 'Processed (with filters)' : 'Original'}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">👀 Views</span>
+                                    <span class="meta-value">${share.viewCount}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">📥 Downloads</span>
+                                    <span class="meta-value">${share.downloadCount}</span>
+                                </div>
+                                ${share.expiresAt ? `
+                                <div class="meta-item">
+                                    <span class="meta-label">⏰ Expires</span>
+                                    <span class="meta-value">${new Date(share.expiresAt).toLocaleDateString()}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+
+                            <a href="${downloadUrl}" class="download-button">
+                                📥 Download ${share.photoCount > 1 ? `${share.photoCount} Photos` : 'Photo'}
+                            </a>
+
+                            <div style="margin-top: 15px; color: #6c757d; font-size: 14px;">
+                                Click the button above to download ${share.photoCount > 1 ? 'all photos as a ZIP file' : 'the photo'}
+                            </div>
+                        `;
+
+                        // Update page title
+                        document.title = `${share.title} - Classic Web Fotos`;
+
+                        // Store photos for lightbox
+                        window.sharePhotos = share.previewPhotos;
+                    } else {
+                        document.getElementById('shareContent').innerHTML = `<div class="error-state">❌ ${data.error?.message || 'Share not found or expired'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching share info:', error);
+                    document.getElementById('shareContent').innerHTML = '<div class="error-state">❌ Failed to load share information</div>';
+                });
+        }
+
+        // Lightbox functionality
+        let currentPhotoIndex = 0;
+
+        function openLightbox(index) {
+            if (!window.sharePhotos || !window.sharePhotos[index]) return;
+
+            currentPhotoIndex = index;
+            const photo = window.sharePhotos[index];
+
+            document.getElementById('lightbox-img').src = photo.thumbnailPath; // Use original_path if available
+            document.getElementById('lightbox-info').innerHTML = `
+                <strong>${photo.displayName}</strong><br>
+                <small>${photo.width} × ${photo.height} pixels</small>
+            `;
+
+            document.getElementById('lightbox').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        function nextPhoto() {
+            if (!window.sharePhotos) return;
+            currentPhotoIndex = (currentPhotoIndex + 1) % window.sharePhotos.length;
+            openLightbox(currentPhotoIndex);
+        }
+
+        function prevPhoto() {
+            if (!window.sharePhotos) return;
+            currentPhotoIndex = (currentPhotoIndex - 1 + window.sharePhotos.length) % window.sharePhotos.length;
+            openLightbox(currentPhotoIndex);
+        }
+
+        // Close lightbox when clicking outside image
+        document.getElementById('lightbox').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeLightbox();
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (!document.getElementById('lightbox').classList.contains('active')) return;
+
+            switch(e.key) {
+                case 'Escape':
+                    closeLightbox();
+                    break;
+                case 'ArrowLeft':
+                    prevPhoto();
+                    break;
+                case 'ArrowRight':
+                    nextPhoto();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>

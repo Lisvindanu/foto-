@@ -243,4 +243,69 @@ export const photosRoutes = new Elysia({ prefix: '/api/photos' })
       set.status = status;
       return response;
     }
+  })
+
+  // Batch delete photos
+  .post('/batch-delete', async ({ body, headers, set }) => {
+    try {
+      const authResult = await requireAuth(headers);
+      if (!authResult.success) {
+        set.status = authResult.status;
+        return authResult;
+      }
+
+      const { user } = authResult;
+      const { photoIds } = body as { photoIds: number[] };
+
+      if (!photoIds || !Array.isArray(photoIds) || photoIds.length === 0) {
+        set.status = 400;
+        return { success: false, error: 'photoIds array is required' };
+      }
+
+      console.log(`Batch deleting ${photoIds.length} photos for user ${user.id}:`, photoIds);
+
+      // Verify all photos belong to the user
+      const { data: photos, error: fetchError } = await db.client
+        .from('photos')
+        .select('id, filename, original_path, thumbnail_path, processed_path')
+        .eq('user_id', user.id)
+        .in('id', photoIds)
+        .is('deleted_at', null);
+
+      if (fetchError) throw fetchError;
+
+      if (!photos || photos.length !== photoIds.length) {
+        set.status = 404;
+        return {
+          success: false,
+          error: `Some photos not found. Found ${photos?.length || 0} out of ${photoIds.length} photos`
+        };
+      }
+
+      // Soft delete by setting deleted_at timestamp
+      const { error: deleteError } = await db.client
+        .from('photos')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .in('id', photoIds);
+
+      if (deleteError) throw deleteError;
+
+      console.log(`Successfully soft-deleted ${photos.length} photos for user ${user.id}`);
+
+      return createSuccessResponse({
+        deletedCount: photos.length,
+        photoIds: photoIds
+      }, `Successfully deleted ${photos.length} photo${photos.length > 1 ? 's' : ''}`);
+
+    } catch (error) {
+      console.error('Batch delete photos error:', error);
+      const { response, status } = handleError(error);
+      set.status = status;
+      return response;
+    }
+  }, {
+    body: t.Object({
+      photoIds: t.Array(t.Number())
+    })
   });

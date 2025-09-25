@@ -20,10 +20,15 @@
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.0",
+    "@elysiajs/eden": "^1.4.1",
     "@elysiajs/static": "^1.4.0",
     "@supabase/supabase-js": "^2.57.4",
+    "@types/bcryptjs": "^3.0.0",
+    "bcryptjs": "^3.0.2",
     "elysia": "^1.4.6",
+    "jszip": "^3.10.1",
     "mysql2": "^3.15.0",
+    "pdf-lib": "^1.17.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "sharp": "^0.34.4"

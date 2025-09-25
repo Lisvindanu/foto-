@@ -6,13 +6,15 @@ import { existsSync } from 'fs'
 import { initializeDatabase, getAppSettings } from './database/supabase'
 import index from '../public/index.html'
 
-// Import all route modules
-import { authRoutes } from './routes/auth-supabase'
-import { filtersRoutes } from './routes/filters-supabase'
-import { photosRoutes } from './routes/photos-supabase'
-import { statsRoutes } from './routes/stats-supabase'
-import { downloadsRoutes } from './routes/downloads-supabase'
+// Import all modules following Elysia best practices
+import { authModule } from './modules/auth'
+import { photosModule } from './modules/photos'
+import { filtersModule } from './modules/filters'
+import { downloadsModule } from './modules/downloads'
+import { statsModule } from './modules/stats'
+import { sharesModule, publicSharesModule } from './modules/shares'
 import { uploadImage } from './utils/storage'
+import shareHtml from '../public/share.html'
 
 // Database already initialized via Supabase dashboard
 console.log('✅ Using Supabase database (schema applied manually)')
@@ -307,6 +309,38 @@ const app = new Elysia()
         <span class="path">/api/downloads/batch</span>
         <div class="description">Batch download multiple photos as ZIP</div>
       </div>
+      <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="path">/api/downloads/print-layout</span>
+        <div class="description">Generate and download print layout PDF</div>
+      </div>
+
+      <h2>Public Shares</h2>
+      <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="path">/api/shares/create</span>
+        <div class="description">Create public share link for photos (requires auth)</div>
+      </div>
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="path">/api/shares</span>
+        <div class="description">Get user's public shares (requires auth)</div>
+      </div>
+      <div class="endpoint">
+        <span class="method delete">DELETE</span>
+        <span class="path">/api/shares/:token</span>
+        <div class="description">Delete public share (requires auth)</div>
+      </div>
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="path">/share/:token</span>
+        <div class="description">View public share info (no auth required)</div>
+      </div>
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="path">/share/:token/download</span>
+        <div class="description">Download public share (no auth required)</div>
+      </div>
 
       <h2>System</h2>
       <div class="endpoint">
@@ -323,12 +357,17 @@ const app = new Elysia()
     </html>
   `)
 
-  // Register all route modules
-  .use(authRoutes)
-  .use(filtersRoutes)
-  .use(photosRoutes)
-  .use(statsRoutes)
-  .use(downloadsRoutes)
+  // Register all modules following feature-based structure
+  .use(authModule)
+  .use(photosModule)
+  .use(filtersModule)
+  .use(downloadsModule)
+  .use(statsModule)
+  .use(sharesModule)
+  .use(publicSharesModule)
+
+  // Share page route
+  .get('/share/:shareToken', shareHtml)
 
   // Serve React app
   .get('/', index)
@@ -338,11 +377,14 @@ const app = new Elysia()
 console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`)
 console.log(`📸 Classic Web Fotos API ready with all endpoints!`)
 console.log(`📚 API Documentation: http://localhost:3000/api/docs`)
-console.log(`🔍 Available endpoints:`)
+console.log(`🔍 Available endpoints (modular structure):`)
 console.log(`   • POST /api/auth/session - Authentication`)
 console.log(`   • POST /api/photos/upload - Photo upload`)
 console.log(`   • GET  /api/photos - Photo management`)
 console.log(`   • GET  /api/filters - Filter management`)
 console.log(`   • POST /api/filters/apply - Apply filters`)
-console.log(`   • GET  /api/stats/user - Statistics`)
-console.log(`   • GET  /api/downloads/photo/:id/:type - Downloads`)
+console.log(`   • GET  /api/stats/user - User statistics`)
+console.log(`   • POST /api/downloads/batch - Batch ZIP downloads`)
+
+// Export the app type for Eden Treaty
+export type App = typeof app

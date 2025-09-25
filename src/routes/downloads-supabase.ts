@@ -233,13 +233,72 @@ export const downloadsRoutes = new Elysia({ prefix: '/api/downloads' })
         };
       }
 
-      // For now, let's return a simple response indicating batch download is not implemented
-      // In a full implementation, you would use a library like JSZip to create the ZIP file
-      set.status = 501;
-      return {
-        success: false,
-        error: 'Batch download not implemented yet. Please download photos individually.'
+      // Import JSZip dynamically
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+
+      // Download and add each photo to ZIP
+      for (const photo of validPhotos) {
+        try {
+          // Get the appropriate URL based on type
+          let downloadUrl: string;
+          switch (type) {
+            case 'original':
+              downloadUrl = photo.original_path;
+              break;
+            case 'processed':
+              downloadUrl = photo.processed_path || photo.original_path;
+              break;
+            case 'thumbnail':
+              downloadUrl = photo.thumbnail_path || photo.original_path;
+              break;
+            default:
+              downloadUrl = photo.original_path;
+          }
+
+          if (!downloadUrl) {
+            console.warn(`Skipping photo ${photo.filename}: ${type} version not available`);
+            continue;
+          }
+
+          // Fetch the image from Supabase
+          const imageResponse = await fetch(downloadUrl);
+          if (!imageResponse.ok) {
+            console.warn(`Failed to fetch photo ${photo.filename} from storage`);
+            continue;
+          }
+
+          const imageBuffer = await imageResponse.arrayBuffer();
+
+          // Add to ZIP with original filename
+          zip.file(photo.filename, imageBuffer);
+
+        } catch (photoError) {
+          console.warn(`Error processing photo ${photo.filename}:`, photoError);
+          continue;
+        }
+      }
+
+      // Generate ZIP file
+      const zipBuffer = await zip.generateAsync({
+        type: 'arraybuffer',
+        compression: 'DEFLATE',
+        compressionOptions: {
+          level: 6
+        }
+      });
+
+      // Set appropriate headers for ZIP download
+      const timestamp = new Date().toISOString().slice(0, 10);
+      const zipFilename = `classic-web-fotos-${timestamp}.zip`;
+
+      set.headers = {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${zipFilename}"`,
+        'Content-Length': zipBuffer.byteLength.toString()
       };
+
+      return new Response(zipBuffer);
 
     } catch (error) {
       console.error('Batch download error:', error);
@@ -247,4 +306,4 @@ export const downloadsRoutes = new Elysia({ prefix: '/api/downloads' })
       set.status = status;
       return response;
     }
-  });
+  })

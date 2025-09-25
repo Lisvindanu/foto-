@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
 
 interface UserStats {
-  photoCount: number;
+  totalPhotos: number;
+  totalProcessedPhotos: number;
+  totalFavorites: number;
   storageUsed: number;
-  storageQuota: number;
-  favoriteCount: number;
-  totalViews: number;
-  mostUsedFilter?: {
-    id: number;
-    name: string;
-    usageCount: number;
-  };
-  uploadStats: {
+  storageUsedFormatted: string;
+  filtersUsed: number;
+  joinedDate: string;
+  lastActiveDate: string;
+  recentActivity: any[];
+  uploadStats?: {
     thisWeek: number;
     thisMonth: number;
     allTime: number;
@@ -58,7 +57,14 @@ export function StatsPanel() {
 
   const getStoragePercentage = () => {
     if (!stats) return 0;
-    return (stats.storageUsed / stats.storageQuota) * 100;
+    // Assume 100MB quota for now (can be made configurable later)
+    const storageQuota = 100 * 1024 * 1024; // 100MB in bytes
+    return (stats.storageUsed / storageQuota) * 100;
+  };
+
+  const formatStorageQuota = () => {
+    const storageQuota = 100 * 1024 * 1024; // 100MB
+    return formatBytes(storageQuota);
   };
 
   if (isLoading) {
@@ -103,17 +109,17 @@ export function StatsPanel() {
         <div className="stat-card overview">
           <h3>Photo Library</h3>
           <div className="stat-value">
-            {stats.photoCount}
+            {stats.totalPhotos}
             <span className="stat-unit">photos</span>
           </div>
           <div className="stat-details">
             <div className="detail-item">
               <span className="detail-label">Favorites:</span>
-              <span className="detail-value">{stats.favoriteCount}</span>
+              <span className="detail-value">{stats.totalFavorites}</span>
             </div>
             <div className="detail-item">
-              <span className="detail-label">Total Views:</span>
-              <span className="detail-value">{stats.totalViews}</span>
+              <span className="detail-label">Processed:</span>
+              <span className="detail-value">{stats.totalProcessedPhotos}</span>
             </div>
           </div>
         </div>
@@ -123,8 +129,8 @@ export function StatsPanel() {
           <h3>Storage Usage</h3>
           <div className="storage-info">
             <div className="storage-text">
-              <span className="storage-used">{formatBytes(stats.storageUsed)}</span>
-              <span className="storage-total">of {formatBytes(stats.storageQuota)}</span>
+              <span className="storage-used">{stats.storageUsedFormatted}</span>
+              <span className="storage-total">of {formatStorageQuota()}</span>
             </div>
             <div className="storage-bar">
               <div
@@ -143,28 +149,28 @@ export function StatsPanel() {
           <h3>Upload Activity</h3>
           <div className="activity-stats">
             <div className="activity-item">
-              <span className="activity-value">{stats.uploadStats.thisWeek}</span>
+              <span className="activity-value">{stats.uploadStats?.thisWeek || 0}</span>
               <span className="activity-label">This Week</span>
             </div>
             <div className="activity-item">
-              <span className="activity-value">{stats.uploadStats.thisMonth}</span>
+              <span className="activity-value">{stats.uploadStats?.thisMonth || 0}</span>
               <span className="activity-label">This Month</span>
             </div>
             <div className="activity-item">
-              <span className="activity-value">{stats.uploadStats.allTime}</span>
+              <span className="activity-value">{stats.uploadStats?.allTime || stats.totalPhotos || 0}</span>
               <span className="activity-label">All Time</span>
             </div>
           </div>
         </div>
 
-        {/* Most Used Filter */}
-        {stats.mostUsedFilter && (
+        {/* Filter Usage */}
+        {stats.filtersUsed > 0 && (
           <div className="stat-card filter">
-            <h3>Favorite Filter</h3>
+            <h3>Filter Usage</h3>
             <div className="filter-info">
-              <div className="filter-name">{stats.mostUsedFilter.name}</div>
+              <div className="filter-name">Total Filters Applied</div>
               <div className="filter-usage">
-                Used {stats.mostUsedFilter.usageCount} times
+                {stats.filtersUsed} times
               </div>
             </div>
           </div>

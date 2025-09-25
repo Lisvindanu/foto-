@@ -247,3 +247,45 @@ CREATE POLICY "Anyone can read filters" ON filters
 -- Public read access for app_settings (only public ones)
 CREATE POLICY "Anyone can read public app settings" ON app_settings
   FOR SELECT USING (is_public = true);
+
+-- Create share_type enum
+DO $$ BEGIN
+    CREATE TYPE share_type_enum AS ENUM ('single', 'batch');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- Public shares
+CREATE TABLE IF NOT EXISTS public_shares (
+  id BIGSERIAL PRIMARY KEY,
+  share_token VARCHAR(255) UNIQUE NOT NULL,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  share_type share_type_enum NOT NULL,
+  photo_ids BIGINT[] NOT NULL, -- Array of photo IDs
+  title VARCHAR(255),
+  description TEXT,
+  download_type VARCHAR(50) DEFAULT 'original', -- original, processed, thumbnail
+  is_active BOOLEAN DEFAULT TRUE,
+  view_count BIGINT DEFAULT 0,
+  download_count BIGINT DEFAULT 0,
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create indexes for public_shares table
+CREATE INDEX IF NOT EXISTS idx_public_shares_share_token ON public_shares(share_token);
+CREATE INDEX IF NOT EXISTS idx_public_shares_user_id ON public_shares(user_id);
+CREATE INDEX IF NOT EXISTS idx_public_shares_created_at ON public_shares(created_at);
+CREATE INDEX IF NOT EXISTS idx_public_shares_is_active ON public_shares(is_active);
+CREATE INDEX IF NOT EXISTS idx_public_shares_expires_at ON public_shares(expires_at);
+
+-- Apply updated_at trigger to public_shares
+CREATE OR REPLACE TRIGGER update_public_shares_updated_at
+    BEFORE UPDATE ON public_shares
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Public read access for public shares (no auth required)
+ALTER TABLE public_shares ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can read active public shares" ON public_shares
+  FOR SELECT USING (is_active = true AND (expires_at IS NULL OR expires_at > NOW()));

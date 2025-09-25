@@ -76,10 +76,93 @@ export function CameraCapture({ onPhotoTaken, onClose }: CameraCaptureProps) {
     startCamera(newFacing);
   };
 
+  const playInstaxSound = () => {
+    // Create Instax-style camera sound using Web Audio API
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+    // Phase 1: Shutter "ker-chunk" sound
+    const shutterOsc = audioContext.createOscillator();
+    const shutterGain = audioContext.createGain();
+    const shutterFilter = audioContext.createBiquadFilter();
+
+    shutterOsc.connect(shutterFilter);
+    shutterFilter.connect(shutterGain);
+    shutterGain.connect(audioContext.destination);
+
+    // Low frequency mechanical click
+    shutterOsc.type = 'square';
+    shutterOsc.frequency.setValueAtTime(150, audioContext.currentTime);
+    shutterOsc.frequency.exponentialRampToValueAtTime(80, audioContext.currentTime + 0.1);
+
+    shutterFilter.type = 'lowpass';
+    shutterFilter.frequency.value = 500;
+
+    shutterGain.gain.setValueAtTime(0.4, audioContext.currentTime);
+    shutterGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+    shutterOsc.start(audioContext.currentTime);
+    shutterOsc.stop(audioContext.currentTime + 0.2);
+
+    // Phase 2: Film ejection motor sound (delayed)
+    setTimeout(() => {
+      const motorOsc = audioContext.createOscillator();
+      const motorGain = audioContext.createGain();
+      const motorFilter = audioContext.createBiquadFilter();
+
+      motorOsc.connect(motorFilter);
+      motorFilter.connect(motorGain);
+      motorGain.connect(audioContext.destination);
+
+      // Motor whirring sound
+      motorOsc.type = 'sawtooth';
+      motorOsc.frequency.setValueAtTime(200, audioContext.currentTime);
+      motorOsc.frequency.linearRampToValueAtTime(250, audioContext.currentTime + 0.3);
+      motorOsc.frequency.linearRampToValueAtTime(180, audioContext.currentTime + 0.8);
+
+      motorFilter.type = 'bandpass';
+      motorFilter.frequency.value = 300;
+      motorFilter.Q.value = 2;
+
+      motorGain.gain.setValueAtTime(0, audioContext.currentTime);
+      motorGain.gain.linearRampToValueAtTime(0.2, audioContext.currentTime + 0.1);
+      motorGain.gain.linearRampToValueAtTime(0.2, audioContext.currentTime + 0.7);
+      motorGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.0);
+
+      motorOsc.start(audioContext.currentTime);
+      motorOsc.stop(audioContext.currentTime + 1.0);
+    }, 300);
+
+    // Phase 3: Final mechanical "thunk" (film drop)
+    setTimeout(() => {
+      const thunkOsc = audioContext.createOscillator();
+      const thunkGain = audioContext.createGain();
+
+      thunkOsc.connect(thunkGain);
+      thunkGain.connect(audioContext.destination);
+
+      thunkOsc.type = 'square';
+      thunkOsc.frequency.setValueAtTime(100, audioContext.currentTime);
+      thunkOsc.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.1);
+
+      thunkGain.gain.setValueAtTime(0.3, audioContext.currentTime);
+      thunkGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+
+      thunkOsc.start(audioContext.currentTime);
+      thunkOsc.stop(audioContext.currentTime + 0.15);
+    }, 1200);
+  };
+
   const capturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
     setIsCapturing(true);
+
+    // Play Instax camera sound
+    try {
+      playInstaxSound();
+    } catch (error) {
+      console.log('Could not play Instax sound:', error);
+    }
 
     const video = videoRef.current;
     const canvas = canvasRef.current;

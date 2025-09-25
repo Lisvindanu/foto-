@@ -7,6 +7,7 @@ import { AuthPanel } from './components/AuthPanel';
 import { StatsPanel } from './components/StatsPanel';
 import { CameraCapture } from './components/CameraCapture';
 import { PrintDownload } from './components/PrintDownload';
+import { authApi } from './api';
 
 interface User {
   id: number;
@@ -68,12 +69,9 @@ export default function App() {
     }
 
     try {
-      const response = await fetch('/api/auth/validate', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data, error } = await authApi.auth.session.validate();
 
-      if (response.ok) {
-        const data = await response.json();
+      if (data && !error) {
         setUser(data.data.user);
       } else {
         localStorage.removeItem('authToken');
@@ -90,12 +88,9 @@ export default function App() {
     if (!token) return;
 
     try {
-      const response = await fetch('/api/photos', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data, error } = await authApi.photos.list();
 
-      if (response.ok) {
-        const data = await response.json();
+      if (data && !error) {
         setPhotos(data.data.photos || []);
       }
     } catch (error) {
@@ -106,10 +101,9 @@ export default function App() {
   const loadFilters = async () => {
     try {
       console.log('Loading filters...');
-      const response = await fetch('/api/filters');
-      console.log('Filters response:', response.status);
-      if (response.ok) {
-        const data = await response.json();
+      const { data, error } = await authApi.filters.list();
+      console.log('Filters response:', { data, error });
+      if (data && !error) {
         console.log('Filters data:', data);
         const allFilters = data.data.categories.flatMap((cat: any) => cat.filters);
         console.log('All filters:', allFilters);
@@ -143,7 +137,14 @@ export default function App() {
       formData.append('file', photoBlob, `instax-${Date.now()}.jpg`);
       formData.append('displayName', `Instax Photo ${new Date().toLocaleString()}`);
 
+      console.log('Camera upload - FormData entries:');
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
+
       const token = localStorage.getItem('authToken');
+
+      // Use fetch directly instead of Eden Treaty for camera upload
       const response = await fetch('/api/photos/upload', {
         method: 'POST',
         headers: {
@@ -152,8 +153,9 @@ export default function App() {
         body: formData
       });
 
-      if (response.ok) {
-        const result = await response.json();
+      const result = await response.json();
+
+      if (response.ok && result.success) {
         const newPhoto = result.data.photo;
 
         console.log('Photo uploaded successfully:', newPhoto);
@@ -168,29 +170,20 @@ export default function App() {
           console.log('Applying Instax filter to photo ID:', newPhoto.id);
 
           // Automatically apply Instax Mini filter
-          const filterResponse = await fetch('/api/filters/apply', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              photoId: newPhoto.id,
-              filterId: instaxFilter.id,
-              intensity: 1.0
-            })
-          });
+          const { data: filterResult, error: filterError } = await authApi.filters.apply(
+            newPhoto.id,
+            instaxFilter.id,
+            1.0
+          );
 
-          if (filterResponse.ok) {
-            const filterResult = await filterResponse.json();
+          if (filterResult && !filterError) {
             const processedPhoto = filterResult.data.processedPhoto;
             console.log('Filter applied successfully:', processedPhoto);
 
             // Add processed photo to state (this creates a new photo entry)
             setPhotos(prev => [processedPhoto, ...prev]);
           } else {
-            const errorData = await filterResponse.json();
-            console.error('Failed to apply Instax filter:', errorData);
+            console.error('Failed to apply Instax filter:', filterError);
           }
         } else {
           console.error('Instax Mini filter not found');
@@ -199,7 +192,7 @@ export default function App() {
         setShowCamera(false);
         setActiveTab('gallery');
       } else {
-        console.error('Failed to upload camera photo');
+        console.error('Failed to upload camera photo:', result);
       }
     } catch (error) {
       console.error('Error uploading camera photo:', error);
@@ -213,6 +206,11 @@ export default function App() {
 
   const handlePhotosSelected = (photos: Photo[]) => {
     setSelectedPhotos(photos);
+  };
+
+  const handlePrintDownload = (photos: Photo[]) => {
+    setSelectedPhotos(photos);
+    setShowPrintDownload(true);
   };
 
   if (isLoading) {
@@ -240,21 +238,33 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* Decorative Elements */}
+      <div className="ink-splatter splatter-1"></div>
+      <div className="ink-splatter splatter-2"></div>
+      <div className="ink-splatter splatter-3"></div>
+      <div className="ink-splatter splatter-4"></div>
+      <div className="ink-splatter splatter-5"></div>
+      <div className="ink-splatter splatter-6"></div>
+      <div className="ink-splatter splatter-7"></div>
+      <div className="ink-splatter splatter-8"></div>
+      <div className="ink-splatter splatter-9"></div>
+      <div className="ink-splatter splatter-10"></div>
+
       <header className="app-header">
         <div className="header-content">
-          <h1>Classic Web Fotos</h1>
+          <h1>📸 FOTOS STUDIO</h1>
           <nav className="header-nav">
             <button
               className={`nav-button ${activeTab === 'gallery' ? 'active' : ''}`}
               onClick={() => setActiveTab('gallery')}
             >
-              Gallery
+              GALLERY
             </button>
             <button
               className={`nav-button ${activeTab === 'upload' ? 'active' : ''}`}
               onClick={() => setActiveTab('upload')}
             >
-              Upload
+              UPLOAD
             </button>
             <button
               className={`nav-button ${activeTab === 'camera' ? 'active' : ''}`}
@@ -263,17 +273,17 @@ export default function App() {
                 setShowCamera(true);
               }}
             >
-              📸 Instax Kamera
+              CAMERA
             </button>
             <button
               className={`nav-button ${activeTab === 'stats' ? 'active' : ''}`}
               onClick={() => setActiveTab('stats')}
             >
-              Stats
+              STATS
             </button>
           </nav>
           <button className="logout-button" onClick={handleLogout}>
-            Logout
+            LOGOUT
           </button>
         </div>
       </header>
@@ -286,6 +296,7 @@ export default function App() {
               onPhotoSelect={setSelectedPhoto}
               onPhotoUpdate={loadPhotos}
               onPhotosSelected={handlePhotosSelected}
+              onPrintDownload={handlePrintDownload}
             />
             {selectedPhoto && (
               <FilterPanel
@@ -316,13 +327,14 @@ export default function App() {
           />
         )}
 
-        {selectedPhotos.length > 0 && (
+        {showPrintDownload && selectedPhotos.length > 0 && (
           <PrintDownload
             selectedPhotos={selectedPhotos}
             onClose={() => {
               setSelectedPhotos([]);
               setShowPrintDownload(false);
             }}
+            onPhotosDeleted={loadPhotos}
           />
         )}
       </main>

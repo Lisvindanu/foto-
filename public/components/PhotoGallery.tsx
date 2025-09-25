@@ -20,9 +20,11 @@ interface PhotoGalleryProps {
   onPhotoSelect: (photo: Photo) => void;
   onPhotoUpdate: () => void;
   onPhotosSelected?: (photos: Photo[]) => void;
+  onPrintDownload?: (photos: Photo[]) => void;
+  onBatchDelete?: (photos: Photo[]) => void;
 }
 
-export function PhotoGallery({ photos, onPhotoSelect, onPhotoUpdate, onPhotosSelected }: PhotoGalleryProps) {
+export function PhotoGallery({ photos, onPhotoSelect, onPhotoUpdate, onPhotosSelected, onPrintDownload, onBatchDelete }: PhotoGalleryProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'favorites'>('newest');
   const [photoFilter, setPhotoFilter] = useState<'all' | 'original' | 'filtered'>('all');
@@ -205,6 +207,59 @@ export function PhotoGallery({ photos, onPhotoSelect, onPhotoUpdate, onPhotosSel
     }
   };
 
+  const handlePrintDownload = () => {
+    const selectedPhotoObjects = photos.filter(p => selectedPhotos.has(p.id));
+    if (onPrintDownload && selectedPhotoObjects.length > 0) {
+      onPrintDownload(selectedPhotoObjects);
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    const selectedPhotoObjects = photos.filter(p => selectedPhotos.has(p.id));
+    if (selectedPhotoObjects.length === 0) return;
+
+    const photoNames = selectedPhotoObjects.map(p => p.displayName).join(', ');
+    const confirmMessage = selectedPhotoObjects.length === 1
+      ? `Are you sure you want to delete "${photoNames}"?`
+      : `Are you sure you want to delete ${selectedPhotoObjects.length} photos?\n\n${photoNames}`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const photoIds = selectedPhotoObjects.map(p => p.id);
+
+      const response = await fetch('/api/photos/batch-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ photoIds })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Photos deleted:', result);
+
+        alert(`Successfully deleted ${selectedPhotoObjects.length} photo${selectedPhotoObjects.length > 1 ? 's' : ''}!`);
+
+        // Clear selection and refresh
+        exitSelectionMode();
+        onPhotoUpdate();
+      } else {
+        console.error('Failed to delete photos:', response.status);
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to delete photos: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Delete failed:', error);
+      alert('Delete failed. Please try again.');
+    }
+  };
+
   if (photos.length === 0) {
     return (
       <div className="photo-gallery-empty">
@@ -256,17 +311,21 @@ export function PhotoGallery({ photos, onPhotoSelect, onPhotoUpdate, onPhotosSel
               <button onClick={selectAll} className="select-button">Select All</button>
               <button onClick={clearSelection} className="select-button">Clear</button>
               {selectedPhotos.size > 0 && (
-                <button
-                  onClick={() => {
-                    if (onPhotosSelected) {
-                      const selectedPhotoObjects = photos.filter(p => selectedPhotos.has(p.id));
-                      onPhotosSelected(selectedPhotoObjects);
-                    }
-                  }}
-                  className="select-button print-button"
-                >
-                  🖨️ Print & Download
-                </button>
+                <>
+                  <button
+                    onClick={handlePrintDownload}
+                    className="select-button print-button"
+                  >
+                    🖨️ Print & Download
+                  </button>
+                  <button
+                    onClick={handleBatchDelete}
+                    className="select-button delete-button"
+                    style={{ backgroundColor: '#e74c3c', borderColor: '#c0392b', color: 'white' }}
+                  >
+                    🗑️ Delete ({selectedPhotos.size})
+                  </button>
+                </>
               )}
               <button onClick={exitSelectionMode} className="select-button">Cancel</button>
             </>
