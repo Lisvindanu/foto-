@@ -1469,14 +1469,52 @@ body::after {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  /* Hide decorative elements on mobile */
+  body::before,
+  body::after {
+    display: none;
+  }
+
+  /* Main app layout */
+  .app {
+    max-width: 100%;
+    margin: 0;
+    box-shadow: none;
+  }
+
   .app-main {
     padding: 1rem;
+  }
+
+  /* Header responsive */
+  .app-header {
+    padding: 15px 20px;
   }
 
   .header-content {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
+  }
+
+  /* Navigation responsive */
+  .header-nav {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .nav-button {
+    flex: 1;
+    min-width: 70px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  /* Logo responsive */
+  .app-header h1 {
+    font-size: 16px;
   }
 
   .gallery-header {
@@ -1491,6 +1529,50 @@ body::after {
 
   .photo-grid.grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 0.5rem;
+  }
+
+  /* Auth panel responsive */
+  .auth-card {
+    margin: 1rem;
+    padding: 2rem 1.5rem;
+    max-width: calc(100% - 2rem);
+  }
+
+  /* Upload responsive */
+  .upload-zone {
+    padding: 2rem 1rem;
+    margin: 1rem 0;
+  }
+
+  .upload-zone p {
+    font-size: 0.9rem;
+  }
+
+  /* Filter panel responsive */
+  .filter-panel {
+    margin: 0.5rem;
+    max-height: calc(100vh - 1rem);
+  }
+
+  .filter-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .filter-item {
+    padding: 0.5rem;
+  }
+
+  .filter-item span {
+    font-size: 0.7rem;
+  }
+
+  /* Logout button responsive */
+  .logout-button {
+    align-self: center;
+    min-width: 100px;
   }
 }
 

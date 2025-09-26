@@ -82,6 +82,16 @@ const app = new Elysia()
     }
   }))
 
+  // Keepalive ping endpoint
+  .get('/api/ping', () => ({
+    success: true,
+    data: {
+      pong: true,
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    }
+  }))
+
   // Get app settings
   .get('/api/system/settings', async () => ({
     success: true,

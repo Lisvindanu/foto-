@@ -53,6 +53,20 @@ export default function App() {
   useEffect(() => {
     checkAuth();
     loadFilters();
+
+    // Setup keepalive ping to prevent idle timeout (every 10 minutes)
+    const keepaliveInterval = setInterval(async () => {
+      try {
+        console.log('🏓 Sending keepalive ping...');
+        await fetch('/api/ping');
+      } catch (error) {
+        console.log('⚠️ Keepalive ping failed (service may be sleeping):', error);
+      }
+    }, 10 * 60 * 1000); // 10 minutes
+
+    return () => {
+      clearInterval(keepaliveInterval);
+    };
   }, []);
 
   useEffect(() => {
